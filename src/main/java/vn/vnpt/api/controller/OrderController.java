@@ -31,25 +31,4 @@ public class OrderController extends AbstractResponseController {
             return Collections.emptyMap();
         });
     }
-
-    @GetMapping(value = "/list-filter", produces = "application/json")
-    public DeferredResult<ResponseEntity<?>> getCurrentOrders(@RequestParam OrderStatusEnum status, SortPageIn sortPageIn) {
-        return responseEntityDeferredResult(() -> {
-            log.info("[REQUEST]: path: /v1/order/list-filter, {}", status);
-            var rs = orderService.getCurrentOrders(status, sortPageIn);
-            log.info("[RESPONSE]: res: Success!");
-            return rs;
-        });
-    }
-
-    @GetMapping(value = "/detail", produces = "application/json")
-    public DeferredResult<ResponseEntity<?>> getOrderDetail(@RequestParam String orderCode) {
-        return responseEntityDeferredResult(() -> {
-            log.info("[REQUEST]: path: /v1/order/detail");
-            var rs = orderService.getOrderDetail(orderCode);
-            log.info("[RESPONSE]: res: Success!");
-            return rs;
-        });
-    }
-
 }

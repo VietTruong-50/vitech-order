@@ -11,18 +11,20 @@ import vn.vnpt.api.dto.model.OrderStatusEnum;
 import vn.vnpt.api.dto.out.cart.CartDetailOut;
 import vn.vnpt.api.dto.out.order.OrderInformationOut;
 import vn.vnpt.api.dto.out.order.OrderListOut;
-import vn.vnpt.api.dto.out.payment.CardPaymentDetailOut;
+import vn.vnpt.api.model.Notification;
 import vn.vnpt.api.model.User;
 import vn.vnpt.api.repository.AddressRepository;
-import vn.vnpt.api.repository.CardPaymentRepository;
+import vn.vnpt.api.repository.NotificationRepository;
 import vn.vnpt.api.repository.OrderRepository;
 import vn.vnpt.api.repository.UserRepository;
 import vn.vnpt.api.service.CartService;
 import vn.vnpt.api.service.OrderService;
+import vn.vnpt.api.service.VNPayService;
 import vn.vnpt.common.Common;
 import vn.vnpt.common.model.PagingOut;
 import vn.vnpt.common.model.SortPageIn;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -30,19 +32,20 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
-    private final CardPaymentRepository cardPaymentRepository;
     private final AddressRepository addressRepository;
     private final KafkaProducerService kafkaProducerService;
     private final CartService cartService;
+    private final NotificationRepository notificationRepository;
 
 
-    public OrderServiceImpl(UserRepository userRepository, OrderRepository orderRepository, CardPaymentRepository cardPaymentRepository, AddressRepository addressRepository, KafkaProducerService kafkaProducerService, CartService cartService) {
+    public OrderServiceImpl(UserRepository userRepository, OrderRepository orderRepository, AddressRepository addressRepository,
+                            KafkaProducerService kafkaProducerService, CartService cartService, NotificationRepository notificationRepository) {
         this.orderRepository = orderRepository;
-        this.cardPaymentRepository = cardPaymentRepository;
         this.addressRepository = addressRepository;
         this.kafkaProducerService = kafkaProducerService;
         this.userRepository = userRepository;
         this.cartService = cartService;
+        this.notificationRepository = notificationRepository;
     }
 
     @Override
@@ -55,6 +58,8 @@ public class OrderServiceImpl implements OrderService {
             Authentication authentication = securityContext.getAuthentication();
             Optional<User> user = userRepository.findByEmail(authentication.getName());
             String userId = user.get().getId();
+
+            String orderCode = Common.getAlphaNumeric(12);
 
             //Check && update address
             var address = addressRepository.getAddressDetail(createOrderIn.getAddressId());
@@ -76,19 +81,30 @@ public class OrderServiceImpl implements OrderService {
 
             for (var item : cartDetailOut.getCart().values()) {
                 var product = (AddUpdateItemIn) item;
-                orderRepository.createOrderDetail(orderId, product.getProductId(), product.getQuantity(), product.getPrice());
+                orderRepository.createOrderDetail(orderId, product);
             }
 
-            orderRepository.createNewOrder(userId, createOrderIn, orderId);
+            orderRepository.createNewOrder(userId, createOrderIn, orderId, orderCode);
 
             //delete cart
             cartService.deleteCart();
 
+            Notification notification = new Notification();
+
+            notification.setOrderId(orderId);
+            notification.setOrderCode(orderCode);
+            notification.setCustomerId(userId);
+            notification.setMessageContent("Đặt hàng thành công");
+            notification.setCreatedDate(LocalDate.now().toString());
+            notification.setUpdatedDate(LocalDate.now().toString());
+
+            notificationRepository.save(notification);
+
             //Todo: Notification
-            kafkaProducerService.sendMessage("PurchaseTopic", "Order %s created successfully!".formatted("orderId"));
+//            kafkaProducerService.sendMessage("PurchaseTopic", "Order %s created successfully!".formatted("orderId"));
         } catch (Exception e) {
             e.printStackTrace();
-            kafkaProducerService.sendMessage("Exception", "Create order failed!");
+//            kafkaProducerService.sendMessage("Exception", "Create order failed!");
         }
     }
 

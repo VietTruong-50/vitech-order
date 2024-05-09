@@ -3,6 +3,7 @@ package vn.vnpt.api.repository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import vn.vnpt.api.dto.in.CreateOrderIn;
+import vn.vnpt.api.dto.in.cart.AddUpdateItemIn;
 import vn.vnpt.api.dto.model.OrderStatusEnum;
 import vn.vnpt.api.dto.out.order.OrderDetailOut;
 import vn.vnpt.api.dto.out.order.OrderInformationOut;
@@ -32,13 +33,13 @@ public class OrderRepository {
 
     private final ProcedureCallerV3 procedureCallerV3;
 
-    public void createNewOrder(String userCreated, CreateOrderIn createOrderIn, String orderId) {
+    public void createNewOrder(String userCreated, CreateOrderIn createOrderIn, String orderId, String orderCode) {
         var outputs = procedureCallerV3.callNoRefCursor("order_create_new", List.of(
                 ProcedureParameter.inputParam("prs_order_id", String.class, orderId),
                 ProcedureParameter.inputParam("prs_invoice_symbol", String.class, invoiceSymbol),
                 ProcedureParameter.inputParam("prs_tax_number", String.class, taxCode),
                 ProcedureParameter.inputParam("prs_tax_authorities_code", String.class, taxAuthoritiesCode),
-                ProcedureParameter.inputParam("prs_order_code", String.class, Common.getAlphaNumeric(12)),
+                ProcedureParameter.inputParam("prs_order_code", String.class, orderCode),
                 ProcedureParameter.inputParam("prs_user_id", String.class, userCreated),
                 ProcedureParameter.inputParam("prs_status", String.class, OrderStatusEnum.PENDING),
                 ProcedureParameter.inputParam("prs_total", Long.class, createOrderIn.getTotal()),
@@ -52,12 +53,13 @@ public class OrderRepository {
         if (!DatabaseStatus.Success.equals(result)) throw new RuntimeException("Create subcategory failed!");
     }
 
-    public void createOrderDetail(String orderId, String productId, int quantity, Long price) {
+    public void createOrderDetail(String orderId, AddUpdateItemIn product) {
         var outputs = procedureCallerV3.callNoRefCursor("order_detail_create_new", List.of(
                 ProcedureParameter.inputParam("prs_order_id", String.class, orderId),
-                ProcedureParameter.inputParam("prs_product_id", String.class, productId),
-                ProcedureParameter.inputParam("prs_quantity", Integer.class, quantity),
-                ProcedureParameter.inputParam("prs_item_price", Long.class, price),
+                ProcedureParameter.inputParam("prs_product_id", String.class, product.getProductId()),
+                ProcedureParameter.inputParam("prs_quantity", Integer.class, product.getQuantity()),
+                ProcedureParameter.inputParam("prs_item_price", Long.class, product.getPrice()),
+                ProcedureParameter.inputParam("prs_attribute", String.class, product.getAttribute()),
                 ProcedureParameter.outputParam("out_result", String.class))
         );
 
@@ -74,6 +76,8 @@ public class OrderRepository {
                         ProcedureParameter.inputParam("prn_page_index", Integer.class, sortPageIn.getPage()),
                         ProcedureParameter.inputParam("prn_page_size", Integer.class, sortPageIn.getMaxSize()),
                         ProcedureParameter.inputParam("prs_key_search", String.class, sortPageIn.getKeySearch()),
+                        ProcedureParameter.inputParam("prs_create_date_from", String.class, null),
+                        ProcedureParameter.inputParam("prs_create_date_to", String.class, null),
                         ProcedureParameter.outputParam("out_total", Long.class),
                         ProcedureParameter.outputParam("out_result", String.class),
                         ProcedureParameter.refCursorParam("out_cur")
