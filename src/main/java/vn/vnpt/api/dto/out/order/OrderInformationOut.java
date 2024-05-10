@@ -80,7 +80,11 @@ public class OrderInformationOut {
     private String refundDate;   
 
     @Col("confirm_date")
-    private String confirmDate;  
+    private String confirmDate;
+
+    @Col("payment_status")
+    private Integer paymentStatus;
+
 
     private List<OrderDetailOut> orderDetailOuts;
 }

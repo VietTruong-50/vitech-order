@@ -1,12 +1,12 @@
 server:
   port: ${PORT_SERVER:9003}
 ---
-spring:
-  security:
-    oauth2:
-      resource-server:
-        jwt:
-          jwk-set-uri: ${KEYCLOAK_HOST:http://localhost:8080}/realms/${KEYCLOAK_REALM:vitech-shopping}/protocol/openid-connect/certs
+#spring:
+#  security:
+#    oauth2:
+#      resource-server:
+#        jwt:
+#          jwk-set-uri: ${KEYCLOAK_HOST:http://localhost:8080}/realms/${KEYCLOAK_REALM:vitech-shopping}/protocol/openid-connect/certs
 ---
 spring:
   datasource:
@@ -58,16 +58,16 @@ spring:
   mvc:
     dispatch-options-request: true
 ---
-keycloak:
-  realm-master: ${KEYCLOAK_REALM_ADMIN:master}
-  realm: ${KEYCLOAK_REALM:vitech-shopping}
-  auth-server-url: ${KEYCLOAK_HOST:http://localhost:8080}
-  client-admin: ${KEYCLOAK_CLIENT_ADMIN:admin-cli}
-  client: ${KEYCLOAK_CLIENT:vitech-shopping}
-  credentials:
-    client-id: admin-cli
-    username: ${KEYCLOAK_USERNAME:admin}
-    password: ${KEYCLOAK_PASSWORD:admin}
+#keycloak:
+#  realm-master: ${KEYCLOAK_REALM_ADMIN:master}
+#  realm: ${KEYCLOAK_REALM:vitech-shopping}
+#  auth-server-url: ${KEYCLOAK_HOST:http://localhost:8080}
+#  client-admin: ${KEYCLOAK_CLIENT_ADMIN:admin-cli}
+#  client: ${KEYCLOAK_CLIENT:vitech-shopping}
+#  credentials:
+#    client-id: admin-cli
+#    username: ${KEYCLOAK_USERNAME:admin}
+#    password: ${KEYCLOAK_PASSWORD:admin}
 ---
 logging:
   level:

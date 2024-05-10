@@ -33,7 +33,7 @@ public class SecurityConfiguration {
 
     private final String[] publicEndpoints = new String[]{"/v1/shopping/customer/auth/**",
             "/actuator/**", "/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**",
-            "/v1/shopping/category/**", "/v1/shopping/product/**", "/v1/shopping/sub-category/**", "/v1/shopping/cart/**", "/v1/shopping/tag/**"};
+            "/v1/order/payment-callback"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

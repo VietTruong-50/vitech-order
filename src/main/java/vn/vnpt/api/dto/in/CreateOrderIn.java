@@ -10,10 +10,6 @@ import java.time.LocalDate;
 @Data
 public class CreateOrderIn {
     private String addressId;
-    private String cardNumber;
-    private String cardOwner;
-    private String month;
-    private String year;
     private String receiverName;
     private String phone;
     private String email;
