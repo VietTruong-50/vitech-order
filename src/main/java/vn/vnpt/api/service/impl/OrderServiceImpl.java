@@ -1,6 +1,9 @@
 package vn.vnpt.api.service.impl;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,12 +24,14 @@ import vn.vnpt.api.repository.OrderRepository;
 import vn.vnpt.api.repository.UserRepository;
 import vn.vnpt.api.service.CartService;
 import vn.vnpt.api.service.OrderService;
+import vn.vnpt.api.service.VNPayService;
 import vn.vnpt.common.Common;
 import vn.vnpt.common.model.PagingOut;
 import vn.vnpt.common.model.SortPageIn;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -40,20 +45,28 @@ public class OrderServiceImpl implements OrderService {
     private final KafkaProducerService kafkaProducerService;
     private final CartService cartService;
     private final NotificationRepository notificationRepository;
+    private final VNPayService vnPayService;
+    private final HashOperations<Object, Object, Object> hashOperations;
+    private final RedisTemplate<Object, Object> redisTemplate;
+    private final String CART_KEY = "user:cart";
 
 
-    public OrderServiceImpl(UserRepository userRepository, OrderRepository orderRepository, AddressRepository addressRepository,
-                            KafkaProducerService kafkaProducerService, CartService cartService, NotificationRepository notificationRepository) {
+    public OrderServiceImpl(RedisTemplate<Object, Object> redisTemplate, UserRepository userRepository, OrderRepository orderRepository, AddressRepository addressRepository,
+                            KafkaProducerService kafkaProducerService, CartService cartService, NotificationRepository notificationRepository,
+                            VNPayService vnPayService) {
         this.orderRepository = orderRepository;
         this.addressRepository = addressRepository;
         this.kafkaProducerService = kafkaProducerService;
         this.userRepository = userRepository;
         this.cartService = cartService;
         this.notificationRepository = notificationRepository;
+        this.vnPayService = vnPayService;
+        this.hashOperations = redisTemplate.opsForHash();
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
-    public void checkOut(CreateOrderIn createOrderIn, String orderInfo) {
+    public Object checkOut(CreateOrderIn createOrderIn, String orderInfo, HttpServletRequest request) {
         try {
             //Get user id
             SecurityContext securityContext = SecurityContextHolder.getContext();
@@ -77,7 +90,7 @@ public class OrderServiceImpl implements OrderService {
             var orderId = Common.GenerateUUID();
 
             if (createOrderIn.getPaymentMethodEnum().equals(PaymentMethodEnum.COD)) {
-                updateCart(orderId);
+                updateCart(orderId, userId);
 
                 orderRepository.createNewOrder(userId, createOrderIn, orderId, orderInfo);
 
@@ -92,34 +105,36 @@ public class OrderServiceImpl implements OrderService {
 
                 notificationRepository.save(notification);
             } else if (createOrderIn.getPaymentMethodEnum().equals(PaymentMethodEnum.CREDIT_CARD)) {
+                String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+                String vnpayUrl = vnPayService.createOrder(createOrderIn.getTotal(), orderInfo, baseUrl);
+
                 orderRepository.createNewOrder(userId, createOrderIn, orderId, orderInfo);
+
+                return vnpayUrl;
             }
 
-            //Todo: Notification
 //            kafkaProducerService.sendMessage("PurchaseTopic", "Order %s created successfully!".formatted("orderId"));
         } catch (Exception e) {
             e.printStackTrace();
 //            kafkaProducerService.sendMessage("Exception", "Create order failed!");
         }
+        return Collections.emptyMap();
     }
 
     @Override
     public void updateVnpayOrder(Map<String, String> queryParams, HttpServletResponse response) {
         try {
-            //Get user id
-            SecurityContext securityContext = SecurityContextHolder.getContext();
-            Authentication authentication = securityContext.getAuthentication();
-            Optional<User> user = userRepository.findByEmail(authentication.getName());
-            String userId = user.get().getId();
-
             var status = queryParams.get("vnp_ResponseCode");
             var orderInfo = queryParams.get("vnp_OrderInfo");
+            var orderDetail = orderRepository.getOrderDetail(orderInfo);
+
+            //Get user id
+            String userId = orderDetail.getUserCreated();
 
             if (Objects.equals(status, "00")) {
-                updateCart(orderInfo);
+                updateCart(orderDetail.getOrderId(), userId);
 
-                var orderDetail = getOrderDetail(orderInfo);
-
+                //Todo: Notification
                 Notification notification = new Notification();
 
                 notification.setOrderId(orderDetail.getOrderId());
@@ -131,8 +146,9 @@ public class OrderServiceImpl implements OrderService {
 
                 notificationRepository.save(notification);
 
-                response.sendRedirect("http://localhost:4200/homepage");
+                response.sendRedirect("http://localhost:4200/payment-completed?orderCode=" + orderInfo);
             } else {
+                orderRepository.deleteOrder(orderDetail.getOrderId());
                 response.sendRedirect("http://localhost:4200/checkout");
             }
         } catch (IOException e) {
@@ -140,11 +156,9 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private void updateCart(String orderId) {
-        CartDetailOut cartDetailOut;
-
+    private void updateCart(String orderId, String userId) {
         //Get cart items
-        cartDetailOut = cartService.getCartDetail();
+        CartDetailOut cartDetailOut = new CartDetailOut(hashOperations.entries(CART_KEY + ":" + userId));
 
         for (var item : cartDetailOut.getCart().values()) {
             var product = (AddUpdateItemIn) item;
@@ -152,7 +166,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         //delete cart
-        cartService.deleteCart();
+        redisTemplate.delete(CART_KEY + ":" + userId);
     }
 
     @Override
@@ -164,7 +178,6 @@ public class OrderServiceImpl implements OrderService {
     public OrderInformationOut getOrderDetail(String orderCode) {
         var rs = orderRepository.getOrderDetail(orderCode);
         rs.setOrderDetailOuts(orderRepository.getOrderDetails(orderCode));
-
         return rs;
     }
 

@@ -121,4 +121,14 @@ public class OrderRepository {
         }
         return outList;
     }
+
+    public void deleteOrder(String orderId) {
+        var outputs = procedureCallerV3.callNoRefCursor("order_delete", List.of(
+                ProcedureParameter.inputParam("prs_order_id", String.class, orderId),
+                ProcedureParameter.outputParam("out_result", String.class))
+        );
+
+        String result = (String) outputs.get("out_result");
+        if (!DatabaseStatus.Success.equals(result)) throw new RuntimeException("Call order_delete failed!");
+    }
 }

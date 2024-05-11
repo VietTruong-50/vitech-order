@@ -1,5 +1,6 @@
 package vn.vnpt.api.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import vn.vnpt.api.dto.in.CreateOrderIn;
 import vn.vnpt.api.dto.model.OrderStatusEnum;
@@ -12,7 +13,7 @@ import java.util.Map;
 
 public interface OrderService {
 
-    void checkOut(CreateOrderIn createOrderIn, String orderInfo);
+    Object checkOut(CreateOrderIn createOrderIn, String orderInfo, HttpServletRequest request);
 
     void updateVnpayOrder(Map<String, String> queryParams, HttpServletResponse response);
 
