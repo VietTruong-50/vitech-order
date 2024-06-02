@@ -51,7 +51,7 @@ eureka:
   instance:
     ip-address: ${CLIENT_IP_ADDRESS:localhost}
     prefer-ip-address: ${PREFER_IP_ADDRESS:false}
-    hostname: ${HOSTNAME:order-service}
+    hostname: ${HOSTNAME:localhost}
 
 ---
 spring:

@@ -60,15 +60,18 @@ services:
       - zookeeper
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092
-      KAFKA_CREATE_TOPIC: "vitech-notification"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:29092,PLAINTEXT_INTERNAL://broker:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_CREATE_TOPICS: "user-activity:1:2,exception:1:2"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     ports:
-      - 29092:29092
+      - "29092:29092"
+      - "29093:29093"
     networks:
       - backend
+
   # command:
   #kafka-topics --create --bootstrap-server localhost:29092 --replication-factor 1 --partitions 1 --topic TutorialTopic
   # kafka-topics --delete --topic TutorialTopic --bootstrap-server localhost:29092
