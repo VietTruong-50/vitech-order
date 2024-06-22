@@ -110,6 +110,26 @@ spring:
     template:
       default-topic: order-statistic
 ---
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:truongquocviet2001@gmail.com}
+    password: ${MAIL_PASSWORD:typm nhve deee hjlz}
+    #    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          starttls:
+            enable: true
+          auth: true
+          connection-timeout: ${MAIL_CONNECTION_TIMEOUT:30000}
+          timeout: ${MAIL_CONNECTION_TIMEOUT:30000}
+          write timeout: ${MAIL_CONNECTION_TIMEOUT:30000}
+          ssl:
+            enable: false
+    default-encoding: UTF-8
+---
 token:
   signin:
     key: 413F4428472B4B6250655368566D5970337336763979244226452948404D6351213421312312312321312awdfada
